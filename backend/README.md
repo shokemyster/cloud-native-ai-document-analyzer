@@ -1,6 +1,44 @@
 # Backend
 
-This directory will contain the Python backend used by both the FastAPI server and Celery workers.
+Async FastAPI service for document ingestion and metadata persistence.
 
-The code is divided by responsibility rather than by framework. HTTP and Celery are delivery mechanisms around shared application use cases and domain rules.
+## Local setup
 
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install -e '.[dev]'
+cp .env.example .env
+alembic upgrade head
+uvicorn app.main:create_app --factory --reload
+```
+
+The example database URL assumes a PostgreSQL database and credentials have
+already been provisioned. The API does not create schemas during startup.
+
+## Quality checks
+
+```bash
+ruff check .
+ruff format --check .
+mypy app
+pytest
+```
+
+## REST API
+
+- `POST /api/v1/documents` uploads a PDF or CSV document.
+- `GET /api/v1/documents` lists persisted document metadata.
+- `GET /api/v1/documents/{document_id}` retrieves one document.
+- `GET /api/v1/health/live` checks process health.
+- `GET /api/v1/health/ready` checks PostgreSQL connectivity.
+
+## Architectural boundaries
+
+Routes translate HTTP, services coordinate workflows and transactions,
+repositories contain SQLAlchemy queries, and storage adapters persist document
+bytes. PostgreSQL stores metadata rather than file content.
+
+The initial local storage adapter is intended only for development. It is not
+durable across Kubernetes pod replacement and must be replaced by shared object
+storage before horizontal scaling.
