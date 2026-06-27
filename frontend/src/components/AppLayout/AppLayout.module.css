@@ -1,0 +1,64 @@
+.shell {
+  min-height: 100vh;
+}
+
+.header {
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface);
+}
+
+.headerContent {
+  display: flex;
+  width: min(100% - 2rem, 68rem);
+  min-height: 4.25rem;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+  margin: 0 auto;
+}
+
+.brand {
+  color: var(--color-text);
+  font-weight: 750;
+  letter-spacing: -0.02em;
+  text-decoration: none;
+}
+
+.navigation {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.navigationLink {
+  padding: 0.55rem 0.75rem;
+  border-radius: 0.4rem;
+  color: var(--color-muted);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.navigationLink:hover {
+  color: var(--color-text);
+  background: var(--color-background);
+}
+
+.navigationLinkActive {
+  color: var(--color-primary);
+  background: #edf2ff;
+}
+
+.main {
+  width: min(100% - 2rem, 68rem);
+  margin: 0 auto;
+  padding: clamp(2rem, 6vw, 4rem) 0;
+}
+
+@media (max-width: 32rem) {
+  .headerContent {
+    min-height: auto;
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 0.75rem;
+    padding: 1rem 0;
+  }
+}

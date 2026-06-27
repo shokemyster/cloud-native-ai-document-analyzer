@@ -1,0 +1,32 @@
+# Local secrets and environment overrides
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+
+# Node and Vite
+node_modules/
+dist/
+.vite/
+
+# Test and coverage output
+coverage/
+.coverage
+htmlcov/
+
+# IDE and operating-system files
+.DS_Store
+.idea/
+.vscode/
+
+# Local runtime data
+data/
+tmp/
+
