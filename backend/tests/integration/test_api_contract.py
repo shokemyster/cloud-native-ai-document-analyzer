@@ -29,6 +29,8 @@ def test_liveness_and_document_routes_are_exposed(tmp_path: Path) -> None:
 
     assert response.status_code == 200
     assert response.json() == {"status": "ok"}
-    assert openapi["paths"]["/api/v1/documents"]["post"]
+    assert "202" in openapi["paths"]["/api/v1/documents"]["post"]["responses"]
     assert openapi["paths"]["/api/v1/documents"]["get"]
     assert openapi["paths"]["/api/v1/documents/{document_id}"]["get"]
+    assert openapi["paths"]["/api/v1/jobs"]["get"]
+    assert openapi["paths"]["/api/v1/jobs/{job_id}"]["get"]

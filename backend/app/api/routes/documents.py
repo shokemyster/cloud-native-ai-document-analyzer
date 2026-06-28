@@ -7,29 +7,39 @@ from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, 
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.dependencies import get_document_service, get_session
-from app.schemas.document import DocumentListResponse, DocumentResponse
+from app.schemas.document import (
+    DocumentListResponse,
+    DocumentResponse,
+    DocumentUploadResponse,
+)
+from app.schemas.processing_job import ProcessingJobResponse
 from app.services.documents import (
     DocumentNotFoundError,
     DocumentService,
     DocumentTooLargeError,
     EmptyDocumentError,
     InvalidFilenameError,
+    JobEnqueueError,
     UnsupportedDocumentTypeError,
 )
 
 router = APIRouter(prefix="/documents", tags=["documents"])
 
 
-@router.post("", response_model=DocumentResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "",
+    response_model=DocumentUploadResponse,
+    status_code=status.HTTP_202_ACCEPTED,
+)
 async def upload_document(
     file: Annotated[UploadFile, File(description="PDF or CSV document")],
     session: Annotated[AsyncSession, Depends(get_session)],
     service: Annotated[DocumentService, Depends(get_document_service)],
-) -> DocumentResponse:
-    """Store an uploaded document and persist its metadata."""
+) -> DocumentUploadResponse:
+    """Persist an uploaded document and enqueue background processing."""
 
     try:
-        document = await service.upload(session, file)
+        result = await service.upload(session, file)
     except InvalidFilenameError as exc:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -50,10 +60,22 @@ async def upload_document(
             status_code=status.HTTP_413_CONTENT_TOO_LARGE,
             detail="Uploaded document exceeds the configured size limit",
         ) from exc
+    except JobEnqueueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail={
+                "message": "Document persisted but processing could not be queued",
+                "document_id": str(exc.document_id),
+                "job_id": str(exc.job_id),
+            },
+        ) from exc
     finally:
         await file.close()
 
-    return DocumentResponse.model_validate(document)
+    return DocumentUploadResponse(
+        document=DocumentResponse.model_validate(result.document),
+        job=ProcessingJobResponse.model_validate(result.job),
+    )
 
 
 @router.get("", response_model=DocumentListResponse)

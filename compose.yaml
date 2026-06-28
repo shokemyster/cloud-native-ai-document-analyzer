@@ -1,0 +1,123 @@
+name: ai-document-analyzer
+
+x-backend-environment: &backend-environment
+  APP_ENVIRONMENT: development
+  APP_DATABASE_URL: postgresql+asyncpg://document_analyzer:local-development-only@postgres:5432/document_analyzer
+  APP_REDIS_URL: redis://redis:6379/0
+  APP_UPLOAD_DIRECTORY: /data/uploads
+  APP_CORS_ORIGINS: '["http://localhost:5173"]'
+
+x-backend-service: &backend-service
+  build:
+    context: ./backend
+  image: ai-document-analyzer-backend:local
+  environment: *backend-environment
+  volumes:
+    - document_uploads:/data/uploads
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: document_analyzer
+      POSTGRES_USER: document_analyzer
+      POSTGRES_PASSWORD: local-development-only
+    ports:
+      - "127.0.0.1:5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        ["CMD-SHELL", "pg_isready -U document_analyzer -d document_analyzer"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  redis:
+    image: redis:7.4-alpine
+    command:
+      - redis-server
+      - --appendonly
+      - "yes"
+      - --appendfsync
+      - everysec
+      - --maxmemory-policy
+      - noeviction
+    ports:
+      - "127.0.0.1:6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  migrate:
+    <<: *backend-service
+    command: ["alembic", "upgrade", "head"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
+  api:
+    <<: *backend-service
+    command:
+      - uvicorn
+      - app.main:create_app
+      - --factory
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8000"
+    ports:
+      - "8000:8000"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - import urllib.request; urllib.request.urlopen('http://localhost:8000/api/v1/health/live', timeout=2)
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+
+  worker:
+    <<: *backend-service
+    command:
+      - celery
+      - --app=app.worker.celery_app:celery_app
+      - worker
+      - --loglevel=INFO
+      - --queues=documents
+      - --concurrency=2
+      - --max-tasks-per-child=100
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - celery --app=app.worker.celery_app:celery_app inspect ping --destination "celery@$${HOSTNAME}" --timeout 5
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    init: true
+    stop_grace_period: 5m
+    restart: unless-stopped
+
+volumes:
+  document_uploads:
+  postgres_data:
+  redis_data:

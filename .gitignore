@@ -10,6 +10,7 @@ __pycache__/
 .mypy_cache/
 .ruff_cache/
 .venv/
+*.egg-info/
 
 # Node and Vite
 node_modules/
@@ -29,4 +30,3 @@ htmlcov/
 # Local runtime data
 data/
 tmp/
-

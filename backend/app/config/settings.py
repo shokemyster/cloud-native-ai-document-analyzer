@@ -2,9 +2,9 @@
 
 from functools import lru_cache
 from pathlib import Path
-from typing import Literal
+from typing import Literal, Self
 
-from pydantic import Field
+from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -30,6 +30,13 @@ class Settings(BaseSettings):
     database_max_overflow: int = Field(default=10, ge=0)
     database_pool_timeout_seconds: int = Field(default=30, ge=1)
 
+    redis_url: str = "redis://localhost:6379/0"
+    celery_queue_name: str = Field(default="documents", min_length=1)
+    celery_broker_connection_timeout_seconds: int = Field(default=5, ge=1)
+    celery_visibility_timeout_seconds: int = Field(default=3600, ge=60)
+    celery_task_soft_time_limit_seconds: int = Field(default=270, ge=1)
+    celery_task_time_limit_seconds: int = Field(default=300, ge=1)
+
     upload_directory: Path = Path("data/uploads")
     max_upload_size_bytes: int = Field(default=10 * 1024 * 1024, ge=1)
     allowed_upload_extensions: tuple[str, ...] = (".pdf", ".csv")
@@ -41,6 +48,15 @@ class Settings(BaseSettings):
     )
 
     cors_origins: tuple[str, ...] = ("http://localhost:5173",)
+
+    @model_validator(mode="after")
+    def validate_task_time_limits(self) -> Self:
+        if (
+            self.celery_task_soft_time_limit_seconds
+            >= self.celery_task_time_limit_seconds
+        ):
+            raise ValueError("Celery hard time limit must exceed soft time limit")
+        return self
 
 
 @lru_cache

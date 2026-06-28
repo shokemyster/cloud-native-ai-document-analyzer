@@ -5,6 +5,8 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict
 
+from app.schemas.processing_job import ProcessingJobResponse
+
 
 class DocumentResponse(BaseModel):
     """Public metadata returned for an uploaded document."""
@@ -26,3 +28,10 @@ class DocumentListResponse(BaseModel):
     total: int
     limit: int
     offset: int
+
+
+class DocumentUploadResponse(BaseModel):
+    """Document metadata and its accepted background job."""
+
+    document: DocumentResponse
+    job: ProcessingJobResponse

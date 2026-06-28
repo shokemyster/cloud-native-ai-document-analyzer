@@ -1,6 +1,7 @@
 """Document upload and query use cases."""
 
 import logging
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Protocol
 from uuid import UUID, uuid4
@@ -8,8 +9,11 @@ from uuid import UUID, uuid4
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config.settings import Settings
+from app.messaging.base import DocumentTaskPublisher, TaskPublishError
 from app.models.document import Document
+from app.models.processing_job import ProcessingJob
 from app.repositories.documents import DocumentRepository
+from app.repositories.processing_jobs import ProcessingJobRepository
 from app.storage.base import (
     AsyncReadable,
     EmptyObjectError,
@@ -52,6 +56,23 @@ class DocumentNotFoundError(DocumentServiceError):
     """Raised when requested document metadata does not exist."""
 
 
+class JobEnqueueError(DocumentServiceError):
+    """Raised after persistence when the broker rejects a new job."""
+
+    def __init__(self, *, document_id: UUID, job_id: UUID) -> None:
+        super().__init__("Processing job could not be enqueued")
+        self.document_id = document_id
+        self.job_id = job_id
+
+
+@dataclass(frozen=True, slots=True)
+class DocumentUploadResult:
+    """Resources created by an accepted document upload."""
+
+    document: Document
+    job: ProcessingJob
+
+
 class DocumentService:
     """Coordinate storage and metadata persistence for documents."""
 
@@ -59,14 +80,22 @@ class DocumentService:
         self,
         *,
         repository: DocumentRepository,
+        job_repository: ProcessingJobRepository,
+        publisher: DocumentTaskPublisher,
         storage: ObjectStorage,
         settings: Settings,
     ) -> None:
         self._repository = repository
+        self._job_repository = job_repository
+        self._publisher = publisher
         self._storage = storage
         self._settings = settings
 
-    async def upload(self, session: AsyncSession, upload: Upload) -> Document:
+    async def upload(
+        self,
+        session: AsyncSession,
+        upload: Upload,
+    ) -> DocumentUploadResult:
         filename = self._validated_filename(upload.filename)
         extension = Path(filename).suffix.lower()
         media_type = (upload.content_type or "").partition(";")[0].lower()
@@ -98,6 +127,10 @@ class DocumentService:
                 checksum_sha256=stored_object.checksum_sha256,
                 storage_key=stored_object.key,
             )
+            job = await self._job_repository.create(
+                session,
+                document_id=document.id,
+            )
             await session.commit()
         except Exception:
             await session.rollback()
@@ -110,7 +143,27 @@ class DocumentService:
                 )
             raise
 
-        return document
+        try:
+            await self._publisher.publish(job.id)
+        except TaskPublishError as exc:
+            await self._record_enqueue_failure(session, job, exc)
+            raise JobEnqueueError(
+                document_id=document.id,
+                job_id=job.id,
+            ) from exc
+
+        try:
+            await self._job_repository.mark_queued(session, job.id)
+            await session.commit()
+            await session.refresh(job)
+        except Exception:
+            await session.rollback()
+            logger.exception(
+                "Job was published but queued status could not be persisted",
+                extra={"job_id": str(job.id)},
+            )
+
+        return DocumentUploadResult(document=document, job=job)
 
     async def get(self, session: AsyncSession, document_id: UUID) -> Document:
         document = await self._repository.get(session, document_id)
@@ -139,3 +192,24 @@ class DocumentService:
         if safe_filename in {"", ".", ".."} or len(safe_filename) > 255:
             raise InvalidFilenameError
         return safe_filename
+
+    async def _record_enqueue_failure(
+        self,
+        session: AsyncSession,
+        job: ProcessingJob,
+        error: TaskPublishError,
+    ) -> None:
+        try:
+            await self._job_repository.mark_enqueue_failed(
+                session,
+                job.id,
+                error_message=str(error),
+            )
+            await session.commit()
+            await session.refresh(job)
+        except Exception:
+            await session.rollback()
+            logger.exception(
+                "Failed to persist broker publication failure",
+                extra={"job_id": str(job.id)},
+            )

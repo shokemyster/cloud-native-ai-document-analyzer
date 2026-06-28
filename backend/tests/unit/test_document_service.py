@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config.settings import Settings
 from app.repositories.documents import DocumentRepository
+from app.repositories.processing_jobs import ProcessingJobRepository
 from app.services.documents import (
     DocumentService,
     DocumentTooLargeError,
@@ -53,6 +54,19 @@ class RecordingStorage:
         return None
 
 
+class RecordingPublisher:
+    """Publisher fake used by validation-only service tests."""
+
+    def __init__(self) -> None:
+        self.published = False
+
+    async def publish(self, job_id: object) -> None:
+        self.published = True
+
+    async def close(self) -> None:
+        return None
+
+
 def build_settings(tmp_path: Path) -> Settings:
     return Settings.model_validate(
         {
@@ -69,6 +83,8 @@ async def test_unsupported_extension_is_rejected_before_storage(
     storage = RecordingStorage()
     service = DocumentService(
         repository=DocumentRepository(),
+        job_repository=ProcessingJobRepository(),
+        publisher=RecordingPublisher(),
         storage=storage,
         settings=build_settings(tmp_path),
     )
@@ -86,6 +102,8 @@ async def test_unsupported_extension_is_rejected_before_storage(
 async def test_storage_size_error_becomes_service_error(tmp_path: Path) -> None:
     service = DocumentService(
         repository=DocumentRepository(),
+        job_repository=ProcessingJobRepository(),
+        publisher=RecordingPublisher(),
         storage=RecordingStorage(too_large=True),
         settings=build_settings(tmp_path),
     )
