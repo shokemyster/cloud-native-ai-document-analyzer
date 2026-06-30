@@ -77,6 +77,13 @@ class LocalObjectStorage:
             checksum_sha256=digest.hexdigest(),
         )
 
+    async def read(self, key: str) -> bytes:
+        path = self._path_for(key)
+        try:
+            return await asyncio.to_thread(path.read_bytes)
+        except OSError as exc:
+            raise StorageError("Local object read failed") from exc
+
     async def delete(self, key: str) -> None:
         path = self._path_for(key)
         try:

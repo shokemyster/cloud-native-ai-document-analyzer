@@ -10,8 +10,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.config.settings import Settings, get_settings
 from app.database.session import Database
 from app.messaging.base import DocumentTaskPublisher
+from app.repositories.document_analyses import DocumentAnalysisRepository
 from app.repositories.documents import DocumentRepository
 from app.repositories.processing_jobs import ProcessingJobRepository
+from app.services.analyses import DocumentAnalysisService
 from app.services.documents import DocumentService
 from app.services.jobs import ProcessingJobService
 from app.storage.base import ObjectStorage
@@ -70,3 +72,12 @@ def get_processing_job_service() -> ProcessingJobService:
     """Compose the read-only processing-job service."""
 
     return ProcessingJobService(ProcessingJobRepository())
+
+
+def get_document_analysis_service() -> DocumentAnalysisService:
+    """Compose the read-only document-analysis service."""
+
+    return DocumentAnalysisService(
+        analysis_repository=DocumentAnalysisRepository(),
+        document_repository=DocumentRepository(),
+    )

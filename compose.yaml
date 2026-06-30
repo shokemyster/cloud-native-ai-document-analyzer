@@ -93,6 +93,15 @@ services:
 
   worker:
     <<: *backend-service
+    environment:
+      <<: *backend-environment
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_ANALYSIS_INSTRUCTIONS: ${OPENAI_ANALYSIS_INSTRUCTIONS:-}
+      APP_AI_MODEL: ${APP_AI_MODEL:-gpt-5.5}
+      APP_AI_MAX_INPUT_CHARACTERS: ${APP_AI_MAX_INPUT_CHARACTERS:-80000}
+      APP_AI_MAX_OUTPUT_TOKENS: ${APP_AI_MAX_OUTPUT_TOKENS:-600}
+      APP_OPENAI_TIMEOUT_SECONDS: ${APP_OPENAI_TIMEOUT_SECONDS:-60}
+      APP_OPENAI_MAX_RETRIES: ${APP_OPENAI_MAX_RETRIES:-2}
     command:
       - celery
       - --app=app.worker.celery_app:celery_app

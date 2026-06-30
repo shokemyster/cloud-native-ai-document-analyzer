@@ -52,6 +52,16 @@
   overflow-wrap: anywhere;
 }
 
+.error {
+  margin: 0;
+  padding: 0.8rem 1rem;
+  border: 1px solid #efb4b4;
+  border-radius: 0.5rem;
+  background: #fff1f1;
+  color: #8a1c1c;
+  line-height: 1.5;
+}
+
 .actions {
   display: flex;
   justify-content: flex-start;

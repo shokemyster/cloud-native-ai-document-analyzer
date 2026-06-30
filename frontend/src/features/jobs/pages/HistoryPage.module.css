@@ -1,0 +1,144 @@
+.historyPanel {
+  padding: 0;
+  overflow: hidden;
+}
+
+.tableWrapper {
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  min-width: 72rem;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.table th,
+.table td {
+  padding: 0.9rem 1rem;
+  border-bottom: 1px solid var(--color-border);
+  text-align: left;
+  vertical-align: top;
+}
+
+.table th {
+  color: var(--color-muted);
+  background: #f9fafb;
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.table code {
+  font-size: 0.78rem;
+  overflow-wrap: anywhere;
+}
+
+.caption {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.status {
+  display: inline-flex;
+  padding: 0.25rem 0.55rem;
+  border-radius: 999px;
+  background: #edf2ff;
+  color: #244b9b;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: capitalize;
+  white-space: nowrap;
+}
+
+.status[data-status="completed"] {
+  color: #166534;
+  background: #dcfce7;
+}
+
+.status[data-status="failed"],
+.status[data-status="enqueue_failed"] {
+  color: #991b1b;
+  background: #fee2e2;
+}
+
+.status[data-status="processing"] {
+  color: #854d0e;
+  background: #fef9c3;
+}
+
+.analysisButton {
+  padding: 0;
+  border: 0;
+  color: var(--color-primary);
+  background: transparent;
+  font: inherit;
+  font-weight: 650;
+  cursor: pointer;
+  white-space: nowrap;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.2em;
+}
+
+.analysisButton:hover {
+  color: var(--color-primary-hover);
+}
+
+.analysis {
+  padding: 0.5rem;
+  color: var(--color-text);
+  line-height: 1.6;
+}
+
+.analysis p:last-child,
+.analysis ul:last-child {
+  margin-bottom: 0;
+}
+
+.analysisHeader {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.analysisHeader h2 {
+  margin-bottom: 0.5rem;
+}
+
+.analysisHeader span {
+  color: var(--color-muted);
+  font-size: 0.8rem;
+}
+
+.analysis h3 {
+  margin-bottom: 0.5rem;
+  font-size: 0.95rem;
+}
+
+.stateMessage {
+  margin-bottom: 0;
+  color: var(--color-muted);
+}
+
+.emptyAction {
+  margin: 1rem 0 0;
+}
+
+.error {
+  color: #8a1c1c;
+}

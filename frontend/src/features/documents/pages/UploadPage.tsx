@@ -1,4 +1,7 @@
-import { useState } from 'react'
+import { type FormEvent, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+
+import { ApiError, uploadDocument } from '../../../lib/api'
 
 import styles from './UploadPage.module.css'
 
@@ -17,7 +20,34 @@ function formatFileSize(sizeInBytes: number) {
 }
 
 export function UploadPage() {
+  const navigate = useNavigate()
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [errorMessage, setErrorMessage] = useState<string | null>(null)
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+
+    if (!selectedFile || isSubmitting) {
+      return
+    }
+
+    setIsSubmitting(true)
+    setErrorMessage(null)
+
+    try {
+      const result = await uploadDocument(selectedFile)
+      navigate(`/jobs/${result.job.id}`)
+    } catch (error) {
+      setErrorMessage(
+        error instanceof ApiError
+          ? error.message
+          : 'Could not reach the backend API. Confirm that it is running.',
+      )
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
 
   return (
     <section aria-labelledby="upload-heading">
@@ -29,7 +59,7 @@ export function UploadPage() {
       </header>
 
       <div className="panel">
-        <form className={styles.form}>
+        <form className={styles.form} onSubmit={handleSubmit}>
           <div className={styles.field}>
             <label className={styles.label} htmlFor="document">
               Document
@@ -38,10 +68,12 @@ export function UploadPage() {
               accept=".csv,.pdf,application/pdf,text/csv"
               aria-describedby="document-help"
               className={styles.fileInput}
+              disabled={isSubmitting}
               id="document"
               name="document"
               onChange={(event) => {
                 setSelectedFile(event.target.files?.[0] ?? null)
+                setErrorMessage(null)
               }}
               type="file"
             />
@@ -58,16 +90,21 @@ export function UploadPage() {
             </div>
           ) : null}
 
+          {errorMessage ? (
+            <p className={styles.error} role="alert">
+              {errorMessage}
+            </p>
+          ) : null}
+
           <div className={styles.actions}>
-            <button className="button" disabled type="button">
-              Queue analysis
+            <button
+              className="button"
+              disabled={!selectedFile || isSubmitting}
+              type="submit"
+            >
+              {isSubmitting ? 'Queueing…' : 'Queue analysis'}
             </button>
           </div>
-
-          <p className={styles.helpText}>
-            Analysis submission will be enabled when the backend API is
-            connected.
-          </p>
         </form>
       </div>
     </section>

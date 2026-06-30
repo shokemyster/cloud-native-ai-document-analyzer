@@ -1,8 +1,10 @@
 # Backend application package
 
 - `api/` translates HTTP requests and responses.
+- `analysis/` defines provider-neutral AI contracts and provider adapters.
 - `config/` validates environment-derived settings.
 - `database/` owns SQLAlchemy metadata, engines, and sessions.
+- `extraction/` converts supported document formats into bounded text.
 - `messaging/` defines task-publishing contracts and Celery adapters.
 - `models/` defines PostgreSQL ORM models.
 - `repositories/` contains database queries.

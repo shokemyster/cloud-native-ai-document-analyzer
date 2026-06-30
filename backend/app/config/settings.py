@@ -4,7 +4,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Literal, Self
 
-from pydantic import Field, model_validator
+from pydantic import Field, SecretStr, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -36,6 +36,22 @@ class Settings(BaseSettings):
     celery_visibility_timeout_seconds: int = Field(default=3600, ge=60)
     celery_task_soft_time_limit_seconds: int = Field(default=270, ge=1)
     celery_task_time_limit_seconds: int = Field(default=300, ge=1)
+
+    openai_api_key: SecretStr | None = Field(
+        default=None,
+        validation_alias="OPENAI_API_KEY",
+        repr=False,
+    )
+    openai_analysis_instructions: SecretStr | None = Field(
+        default=None,
+        validation_alias="OPENAI_ANALYSIS_INSTRUCTIONS",
+        repr=False,
+    )
+    ai_model: str = Field(default="gpt-5.5", min_length=1)
+    ai_max_input_characters: int = Field(default=80_000, ge=1)
+    ai_max_output_tokens: int = Field(default=600, ge=1)
+    openai_timeout_seconds: int = Field(default=60, ge=1)
+    openai_max_retries: int = Field(default=2, ge=0, le=5)
 
     upload_directory: Path = Path("data/uploads")
     max_upload_size_bytes: int = Field(default=10 * 1024 * 1024, ge=1)

@@ -52,7 +52,7 @@ async def test_save_streams_content_and_calculates_metadata(tmp_path: Path) -> N
         max_size_bytes=1024,
     )
 
-    assert (tmp_path / stored.key).read_bytes() == content
+    assert await storage.read(stored.key) == content
     assert stored.size_bytes == len(content)
     assert stored.checksum_sha256 == hashlib.sha256(content).hexdigest()
 
